@@ -40,7 +40,26 @@ CREATE TABLE IF NOT EXISTS settings (
   question_count INTEGER DEFAULT 50
 );
 
--- Insert default settings
-INSERT INTO settings (key, duration, question_count) 
-VALUES ('main', 30, 50)
-ON CONFLICT (key) DO NOTHING;
+-- 1. Enable RLS on all tables
+ALTER TABLE literature ENABLE ROW LEVEL SECURITY;
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+-- 2. Create policies for Literature (Public Read)
+CREATE POLICY "Allow public read literature" ON literature FOR SELECT USING (true);
+CREATE POLICY "Allow admin insert literature" ON literature FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow admin delete literature" ON literature FOR DELETE USING (true);
+
+-- 3. Create policies for Questions (Public Read)
+CREATE POLICY "Allow public read questions" ON questions FOR SELECT USING (true);
+CREATE POLICY "Allow admin insert questions" ON questions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow admin delete questions" ON questions FOR DELETE USING (true);
+
+-- 4. Create policies for Results (Public Insert & Read)
+CREATE POLICY "Allow public insert results" ON results FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read results" ON results FOR SELECT USING (true);
+
+-- 5. Create policies for Settings (Public Read & Admin Update)
+CREATE POLICY "Allow public read settings" ON settings FOR SELECT USING (true);
+CREATE POLICY "Allow admin update settings" ON settings FOR ALL USING (true);
