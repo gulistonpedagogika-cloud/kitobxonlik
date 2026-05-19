@@ -1,0 +1,8 @@
+{
+  "name": "GulDPI Kitobxonlik",
+  "description": "Guliston davlat pedagogika instituti talabalari uchun kitobxonlik online test topshirish platformasi",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

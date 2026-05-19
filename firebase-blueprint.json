@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Literature": {
+      "title": "Literature",
+      "description": "Adabiyotlar ro'yxati",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Kitob nomi"
+        },
+        "author": {
+          "type": "string",
+          "description": "Muallif"
+        },
+        "description": {
+          "type": "string",
+          "description": "Qisqacha ma'lumot"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Yaratilgan vaqt"
+        }
+      },
+      "required": ["title", "createdAt"]
+    },
+    "Question": {
+      "title": "Question",
+      "description": "Test savollari",
+      "type": "object",
+      "properties": {
+        "literatureId": {
+          "type": "string",
+          "description": "Tegishli adabiyot ID si"
+        },
+        "question": {
+          "type": "string",
+          "description": "Savol matni"
+        },
+        "options": {
+          "type": "array",
+          "description": "Javob variantlari"
+        },
+        "correctOption": {
+          "type": "number",
+          "description": "To'g'ri javob indeksi (0-3)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["literatureId", "question", "options", "correctOption", "createdAt"]
+    },
+    "TestResult": {
+      "title": "Test Result",
+      "description": "Talabalar natijalari",
+      "type": "object",
+      "properties": {
+        "studentName": {
+          "type": "string",
+          "description": "Talaba ismi"
+        },
+        "studentSurname": {
+          "type": "string",
+          "description": "Talaba familiyasi"
+        },
+        "literatureIds": {
+          "type": "array",
+          "description": "Tanlangan adabiyotlar ID lari"
+        },
+        "score": {
+          "type": "number",
+          "description": "To'g'ri javoblar soni"
+        },
+        "total": {
+          "type": "number",
+          "description": "Umumiy savollar soni"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Topshirilgan vaqt"
+        }
+      },
+      "required": ["studentName", "studentSurname", "literatureIds", "score", "total", "timestamp"]
+    }
+  },
+  "firestore": {
+    "literature": {
+      "schema": "Literature",
+      "description": "Kitoblar to'plami"
+    },
+    "questions": {
+      "schema": "Question",
+      "description": "Barcha savollar to'plami"
+    },
+    "testResults": {
+      "schema": "TestResult",
+      "description": "Talaba natijalari to'plami"
+    }
+  }
+}
