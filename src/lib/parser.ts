@@ -13,28 +13,34 @@ export interface ParsedQuestion {
 
 /**
  * Parses a Word file (.docx) and extracts questions from tables.
- * Expected format: 1 row/cell for question, next 4 for answers.
- * By default, we assume the first option is the correct one.
+ * Expected format: 1 question + 4 answers ketma-ketligi.
  */
 export async function parseWordTest(file: File): Promise<ParsedQuestion[]> {
-  const formData = new FormData();
-  formData.append('file', file);
-
   try {
-    const response = await fetch('/api/parse-test', {
-      method: 'POST',
-      body: formData,
-    });
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value;
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Serverga yuklashda xatolik yuz berdi');
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    
+    const questions: ParsedQuestion[] = [];
+    
+    // Pattern: Har bir savol va undan keyin 4 ta javob
+    for (let i = 0; i + 4 < lines.length; i += 5) {
+      questions.push({
+        question: lines[i],
+        options: [lines[i+1], lines[i+2], lines[i+3], lines[i+4]],
+        correctOption: 0
+      });
     }
 
-    const data = await response.json();
-    return data.questions;
-  } catch (err) {
+    if (questions.length === 0) {
+      throw new Error('Fayldan savollar topilmadi. Har bir savol + 4 ta javob ketma-ketligida bo\'lishi kerak.');
+    }
+
+    return questions;
+  } catch (err: any) {
     console.error('Parsing error:', err);
-    throw new Error('Faylni tahlil qilishda xatolik yuz berdi. Fayl .doc yoki .docx formatida ekanligiga ishonch hosil qiling.');
+    throw new Error(err.message || 'Faylni o\'qishda xatolik yuz berdi. Fayl .docx formatida ekanligiga ishonch hosil qiling.');
   }
 }

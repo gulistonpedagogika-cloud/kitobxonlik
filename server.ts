@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import multer from 'multer';
-import WordExtractor from 'word-extractor';
+import mammoth from 'mammoth';
 
 const app = express();
 const PORT = 3000;
@@ -15,22 +15,27 @@ app.post('/api/parse-test', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'Fayl yuklanmadi' });
     }
 
-    const extractor = new WordExtractor();
-    const doc = await extractor.extract(req.file.buffer);
-    const body = doc.getBody();
+    // Mammoth extracts raw text, but for tables we might need to look at the structure
+    // Since the users often use simple tables, text often comes in order:
+    // Q, A1, A2, A3, A4.
+    const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+    const text = result.value;
 
-    // Word-extractor joins table cells with \t or \n
-    // We'll split the text into meaningful segments
-    // Since the format is 1 question + 4 answers, we look for blocks
-    const lines = body.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     
     const questions: any[] = [];
+    // Looking for a pattern: Question text followed by 4 lines of answers
+    // This is a simple heuristic. Better would be HTML parsing if mammoth returns HTML.
     for (let i = 0; i + 4 < lines.length; i += 5) {
       questions.push({
         question: lines[i],
         options: [lines[i+1], lines[i+2], lines[i+3], lines[i+4]],
         correctOption: 0 // Following the rule: 1st option after question is correct
       });
+    }
+
+    if (questions.length === 0) {
+       return res.status(400).json({ error: 'Fayldan savollar topilmadi. Har bir savol + 4 ta javob ketma-ketligida bo\'lishi kerak.' });
     }
 
     res.json({ questions });
