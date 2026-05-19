@@ -18,6 +18,7 @@ interface AdminPanelProps {
   onUploadQuestions: (litId: string, questions: any[]) => Promise<void>;
   onUpdateSettings: (settings: { duration: number; questionCount: number }) => void;
   onLogout: () => void;
+  onRefreshData?: () => Promise<void>;
 }
 
 export function AdminPanel({ 
@@ -29,7 +30,8 @@ export function AdminPanel({
   onDeleteLiterature, 
   onUploadQuestions,
   onUpdateSettings,
-  onLogout 
+  onLogout,
+  onRefreshData
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'literature' | 'uploads' | 'results' | 'settings'>('dashboard');
   const [newLit, setNewLit] = useState({ title: '', author: '', description: '' });
@@ -274,7 +276,21 @@ export function AdminPanel({
 
         {activeTab === 'results' && (
           <div className="space-y-8">
-            <h1 className="text-3xl font-bold text-gray-900">Talabalar natijalari</h1>
+            <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-bold text-gray-900">Talabalar natijalari</h1>
+          {onRefreshData && (
+            <Button 
+              variant="outline" 
+              onClick={async () => {
+                await onRefreshData();
+                alert("Ma'lumotlar yangilandi!");
+              }}
+              className="flex items-center gap-2"
+            >
+              <Users size={18} /> Yangilash
+            </Button>
+          )}
+        </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <table className="w-full text-left">
                 <thead className="bg-gray-50 border-b border-gray-100">

@@ -9,7 +9,7 @@ import { AdminPanel } from './components/AdminPanel';
 import { StudentHome } from './components/StudentHome';
 import { Question, TestView } from './components/TestView';
 import { Button, Card, Input } from './components/ui';
-import { supabase } from './lib/supabase';
+import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 type View = 'student-home' | 'testing' | 'admin-login' | 'admin-dashboard';
 
@@ -30,6 +30,8 @@ export default function App() {
   }, []);
 
   const fetchData = async () => {
+    if (!isSupabaseConfigured) return;
+    
     try {
       // 1. Fetch Literature
       const { data: litData } = await supabase.from('literature').select('*').order('created_at', { ascending: false });
@@ -177,6 +179,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
+      {/* Supabase Warning */}
+      {!isSupabaseConfigured && (
+        <div className="bg-amber-500 text-white text-center py-2 text-sm font-bold animate-pulse">
+          DIQQAT: Supabase sozlanmagan! Ilova sozlamalaridan VITE_SUPABASE_URL va VITE_SUPABASE_ANON_KEY ni kiriting.
+        </div>
+      )}
+
       {/* Navbar */}
       {view !== 'admin-dashboard' && (
         <nav className="bg-white/80 backdrop-blur-md border-b border-gray-100 py-4 px-6 flex justify-between items-center sticky top-0 z-50">
@@ -264,6 +273,7 @@ export default function App() {
               setIsAdminAuthenticated(false);
               setView('student-home');
             }}
+            onRefreshData={fetchData}
           />
         )}
       </main>

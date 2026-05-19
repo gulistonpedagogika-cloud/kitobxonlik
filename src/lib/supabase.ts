@@ -1,13 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL;
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY;
+let rawUrl = (import.meta as any).env.VITE_SUPABASE_URL || '';
+const rawKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials missing. App will fall back to local mode until configured.');
+// Clean up URL if user provided the API endpoint instead of the project root
+if (rawUrl.includes('.supabase.co')) {
+  rawUrl = rawUrl.split('.supabase.co')[0] + '.supabase.co';
 }
 
+export const isSupabaseConfigured = rawUrl && rawUrl !== 'https://placeholder.supabase.co';
+
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder'
+  rawUrl || 'https://placeholder.supabase.co',
+  rawKey || 'placeholder'
 );
