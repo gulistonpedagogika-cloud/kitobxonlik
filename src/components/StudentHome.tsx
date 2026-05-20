@@ -15,13 +15,62 @@ interface Literature {
 }
 
 interface StudentHomeProps {
-  onStartTest: (data: { name: string; surname: string; selectedLiteratureIds: string[] }) => void;
+  onStartTest: (data: { 
+    name: string; 
+    surname: string; 
+    course: string; 
+    educationType: string; 
+    specialty: string; 
+    selectedLiteratureIds: string[] 
+  }) => void;
   literatureList: Literature[];
 }
+
+const BAKALAVRIAT_SPECIALTIES = [
+  "Pedagogika",
+  "Maktabgacha ta’lim",
+  "Boshlang‘ich ta’lim",
+  "Tasviriy san’at va muhandislik grafikasi",
+  "Musiqa ta’limi",
+  "O‘zbek tili va adabiyoti",
+  "Ona tili va adabiyoti: rus tili",
+  "Ona tili va adabiyoti: qozoq tili",
+  "Xorijiy til va adabiyoti: ingliz tili",
+  "Milliy g‘oya, ma’naviyat asoslari va huquq ta’limi",
+  "Jismoniy madaniyat",
+  "Texnologik ta’lim",
+  "Tarix",
+  "Biologiya",
+  "Kimyo",
+  "Geografiya",
+  "Fizika",
+  "Matematika",
+  "Amaliy matematika"
+];
+
+const MAGISTRATURA_SPECIALTIES = [
+  "Pedagogika",
+  "Ta’lim va tarbiya nazariyasi va metodikasi (maktabgacha ta’lim)",
+  "Ta’lim va tarbiya nazariyasi va metodikasi (boshlang‘ich ta’lim)",
+  "Tasviriy san’at",
+  "O‘zbek tili va adabiyoti",
+  "Xorijiy til va adabiyoti: ingliz tili",
+  "Ijtimoiy-gumanitar fanlarni o‘qitish metodikasi (ma’naviyat asoslari)",
+  "Ijtimoiy-gumanitar fanlarni o‘qitish metodikasi (huquq ta’limi)",
+  "Jismoniy tarbiya va sport mashg‘ulotlari nazariyasi va metodikasi",
+  "Ijtimoiy-gumanitar fanlarni o‘qitish metodikasi (tarix)",
+  "Aniq va tabiiy fanlarni o‘qitish metodikasi (biologiya)",
+  "Aniq va tabiiy fanlarni o‘qitish metodikasi (kimyo)",
+  "Aniq va tabiiy fanlarni o‘qitish metodikasi (geografiya)",
+  "Ta'limda axborot texnologiyalari"
+];
 
 export function StudentHome({ onStartTest, literatureList }: StudentHomeProps) {
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
+  const [course, setCourse] = useState(''); // '1' yoki '2'
+  const [educationType, setEducationType] = useState(''); // 'Bakalavriat' yoki 'Magistratura'
+  const [specialty, setSpecialty] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const toggleLiterature = (id: string) => {
@@ -31,9 +80,24 @@ export function StudentHome({ onStartTest, literatureList }: StudentHomeProps) {
   };
 
   const handleStart = () => {
-    if (!name || !surname || selectedIds.length === 0) return;
-    onStartTest({ name, surname, selectedLiteratureIds: selectedIds });
+    if (!name || !surname || !course || !educationType || !specialty || selectedIds.length === 0) return;
+    onStartTest({ 
+      name, 
+      surname, 
+      course, 
+      educationType, 
+      specialty, 
+      selectedLiteratureIds: selectedIds 
+    });
   };
+
+  const currentSpecialties = educationType === 'Bakalavriat' 
+    ? BAKALAVRIAT_SPECIALTIES 
+    : educationType === 'Magistratura' 
+      ? MAGISTRATURA_SPECIALTIES 
+      : [];
+
+  const isFormValid = name.trim() && surname.trim() && course && educationType && specialty && selectedIds.length > 0;
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 space-y-12">
@@ -76,6 +140,70 @@ export function StudentHome({ onStartTest, literatureList }: StudentHomeProps) {
                 onChange={(e) => setSurname(e.target.value)}
               />
             </div>
+
+            {/* Kursni tanlash */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Kursni tanlang</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['1', '2'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setCourse(c)}
+                    className={`py-2.5 px-4 rounded-xl border-2 transition-all font-medium text-sm ${
+                      course === c
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {c}-kurs
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Ta'lim turini tanlash */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ta'lim turi</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['Bakalavriat', 'Magistratura'].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setEducationType(type);
+                      setSpecialty(''); // Ta'lim turi o'zgarganda yo'nalishni tozalaymiz
+                    }}
+                    className={`py-2.5 px-4 rounded-xl border-2 transition-all font-medium text-sm ${
+                      educationType === type
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Yo'nalishlarni tanlash */}
+            {educationType && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-350">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mutaxassislik yo'nalishi</label>
+                <select
+                  value={specialty}
+                  onChange={(e) => setSpecialty(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none bg-white text-gray-700 font-medium transition-all duration-200"
+                >
+                  <option value="" disabled>Yo'nalishingizni tanlang</option>
+                  {currentSpecialties.map((spec) => (
+                    <option key={spec} value={spec}>
+                      {spec}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -118,7 +246,7 @@ export function StudentHome({ onStartTest, literatureList }: StudentHomeProps) {
       <div className="text-center">
         <Button 
           size="lg" 
-          disabled={!name || !surname || selectedIds.length === 0}
+          disabled={!isFormValid}
           onClick={handleStart}
           className="w-full md:w-auto"
         >

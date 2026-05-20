@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Book, FileText, LayoutDashboard, LogOut, Plus, Settings, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
+import { Book, Download, FileText, LayoutDashboard, LogOut, Plus, Settings, ShieldCheck, Trash2, Upload, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { parseWordTest } from '../lib/parser';
 import { Button, Card, Input } from './ui';
@@ -39,6 +39,11 @@ export function AdminPanel({
   const [isUploading, setIsUploading] = useState(false);
   
   const [tempSettings, setTempSettings] = useState(settings);
+
+  // States for filtering student results
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterEducationType, setFilterEducationType] = useState('');
+  const [filterSpecialty, setFilterSpecialty] = useState('');
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -274,77 +279,229 @@ export function AdminPanel({
           </div>
         )}
 
-        {activeTab === 'results' && (
-          <div className="space-y-8">
-            <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Talabalar natijalari</h1>
-          {onRefreshData && (
-            <Button 
-              variant="outline" 
-              onClick={async () => {
-                await onRefreshData();
-                alert("Ma'lumotlar yangilandi!");
-              }}
-              className="flex items-center gap-2"
-            >
-              <Users size={18} /> Yangilash
-            </Button>
-          )}
-        </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-100">
-                  <tr className="font-mono text-xs uppercase tracking-wider text-gray-500">
-                    <th className="px-6 py-4">Ism Familiya</th>
-                    <th className="px-6 py-4">Natija</th>
-                    <th className="px-6 py-4">Sana</th>
-                    <th className="px-6 py-4">Dona</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 font-mono text-sm">
-                  {results.map(res => (
-                    <tr key={res.id} className="hover:bg-gray-50/50">
-                      <td className="px-6 py-4 font-medium text-gray-900">{res.studentSurname} {res.studentName}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                            (res.score / res.total) > 0.7 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                          }`}>
-                            {res.score} / {res.total}
-                          </span>
-                          <button 
-                            onClick={() => {
-                              const selectedLitTitles = literature
-                                .filter(l => res.literatureIds.includes(l.id))
-                                .map(l => l.title);
-                              
-                              import('../lib/pdf').then(({ generateResultsPDF }) => {
-                                generateResultsPDF({
-                                  studentName: res.studentName,
-                                  studentSurname: res.studentSurname,
-                                  literatureTitles: selectedLitTitles,
-                                  score: res.score,
-                                  total: res.total,
-                                  timestamp: new Date(res.timestamp),
-                                });
-                              });
-                            }}
-                            className="text-indigo-600 hover:text-indigo-800"
-                            title="Natijani PDF yuklab olish"
-                          >
-                            <FileText size={18} />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-500">{new Date(res.timestamp).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-gray-500">{new Date(res.timestamp).toLocaleTimeString()}</td>
+        {activeTab === 'results' && (() => {
+          // Dynamic specialty filter list
+          const dynamicSpecialties = Array.from(
+            new Set(
+              results
+                .filter(res => !filterEducationType || res.educationType === filterEducationType)
+                .map(res => res.specialty)
+                .filter(Boolean)
+            )
+          ).sort();
+
+          // Filter & Sort Results (High scores first)
+          const filteredAndSortedResults = results
+            .filter(res => {
+              if (filterCourse && res.course !== filterCourse) return false;
+              if (filterEducationType && res.educationType !== filterEducationType) return false;
+              if (filterSpecialty && res.specialty !== filterSpecialty) return false;
+              return true;
+            })
+            .sort((a, b) => {
+              const scorePctA = a.total > 0 ? a.score / a.total : 0;
+              const scorePctB = b.total > 0 ? b.score / b.total : 0;
+              if (scorePctB !== scorePctA) {
+                return scorePctB - scorePctA; // percentage descending
+              }
+              return b.score - a.score; // absolute score descending
+            });
+
+          const handleDownloadGroupReport = () => {
+            if (filteredAndSortedResults.length === 0) {
+              alert("Hisobot uchun ma'lumotlar mavjud emas!");
+              return;
+            }
+            import('../lib/pdf').then(({ generateGroupReportPDF }) => {
+              generateGroupReportPDF({
+                results: filteredAndSortedResults,
+                filters: {
+                  course: filterCourse,
+                  educationType: filterEducationType,
+                  specialty: filterSpecialty
+                }
+              });
+            });
+          };
+
+          return (
+            <div className="space-y-8">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Talabalar natijalari</h1>
+                  <p className="text-sm text-gray-500 mt-1">Natijalar to'plami eng yuqori ko'rsatkichlar bo'yicha tartiblangan</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button 
+                    onClick={handleDownloadGroupReport}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                  >
+                    <Download size={18} /> PDF Hisobotini yuklash
+                  </Button>
+                  {onRefreshData && (
+                    <Button 
+                      variant="outline" 
+                      onClick={async () => {
+                        await onRefreshData();
+                        alert("Ma'lumotlar yangilandi!");
+                      }}
+                      className="flex items-center gap-2"
+                    >
+                      <Users size={18} /> Yangilash
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Filters Panel */}
+              <Card className="p-6 bg-white border border-gray-100/80">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Kurs filter */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Kurs bo'yicha saralash</label>
+                    <select
+                      value={filterCourse}
+                      onChange={(e) => setFilterCourse(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-100 bg-white text-sm font-medium text-gray-700"
+                    >
+                      <option value="">Barcha kurslar</option>
+                      <option value="1">1-kurs</option>
+                      <option value="2">2-kurs</option>
+                    </select>
+                  </div>
+
+                  {/* Ta'lim turi filter */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Ta'lim turi</label>
+                    <select
+                      value={filterEducationType}
+                      onChange={(e) => {
+                        setFilterEducationType(e.target.value);
+                        setFilterSpecialty(''); // Reset specialty if education type changes
+                      }}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-100 bg-white text-sm font-medium text-gray-700"
+                    >
+                      <option value="">Barcha ta'lim turlari</option>
+                      <option value="Bakalavriat">Bakalavriat</option>
+                      <option value="Magistratura">Magistratura</option>
+                    </select>
+                  </div>
+
+                  {/* Yo'nalish filter */}
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mutaxassislik yo'nalishi</label>
+                    <select
+                      value={filterSpecialty}
+                      onChange={(e) => setFilterSpecialty(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-indigo-100 bg-white text-sm font-medium text-gray-700"
+                    >
+                      <option value="">Barcha yo'nalishlar</option>
+                      {dynamicSpecialties.map(spec => (
+                        <option key={spec} value={spec}>{spec}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {(filterCourse || filterEducationType || filterSpecialty) && (
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={() => {
+                        setFilterCourse('');
+                        setFilterEducationType('');
+                        setFilterSpecialty('');
+                      }}
+                      className="text-xs font-semibold text-rose-600 hover:text-rose-800 transition-colors"
+                    >
+                      Filtrlarni tozalash
+                    </button>
+                  </div>
+                )}
+              </Card>
+
+              {/* Table of Results */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr className="font-mono text-xs uppercase tracking-wider text-gray-500">
+                      <th className="px-6 py-4 w-12 text-center">#</th>
+                      <th className="px-6 py-4">Ism Familiya</th>
+                      <th className="px-6 py-4">Kurs</th>
+                      <th className="px-6 py-4">Ta'lim turi</th>
+                      <th className="px-6 py-4">Yo'nalish</th>
+                      <th className="px-6 py-4">Natija</th>
+                      <th className="px-6 py-4 text-center">Foiz</th>
+                      <th className="px-6 py-4">Sana va Vaqt</th>
+                      <th className="px-6 py-4 w-20 text-center">Sertifikat</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 font-mono text-sm">
+                    {filteredAndSortedResults.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="px-6 py-12 text-center text-gray-400">
+                          Filtr bo'yicha talabalar natijalari topilmadi.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAndSortedResults.map((res, idx) => {
+                        const scorePercent = res.total > 0 ? Math.round((res.score / res.total) * 100) : 0;
+                        return (
+                          <tr key={res.id} className="hover:bg-gray-50/50">
+                            <td className="px-6 py-4 text-center text-gray-400 font-bold">{idx + 1}</td>
+                            <td className="px-6 py-4 font-medium text-gray-900">{res.studentSurname} {res.studentName}</td>
+                            <td className="px-6 py-4 text-gray-600 font-semibold">{res.course ? `${res.course}-kurs` : '-'}</td>
+                            <td className="px-6 py-4 text-gray-500">{res.educationType || '-'}</td>
+                            <td className="px-6 py-4 text-gray-500 max-w-xs truncate" title={res.specialty}>{res.specialty || '-'}</td>
+                            <td className="px-6 py-4">
+                              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                scorePercent >= 70 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                              }`}>
+                                {res.score} / {res.total}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="font-bold text-gray-900">{scorePercent}%</span>
+                            </td>
+                            <td className="px-6 py-4 text-gray-500">
+                              {new Date(res.timestamp).toLocaleDateString()} {new Date(res.timestamp).toLocaleTimeString()}
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <button 
+                                onClick={() => {
+                                  const selectedLitTitles = literature
+                                    .filter(l => res.literatureIds.includes(l.id))
+                                    .map(l => l.title);
+                                  
+                                  import('../lib/pdf').then(({ generateResultsPDF }) => {
+                                    generateResultsPDF({
+                                      studentName: res.studentName,
+                                      studentSurname: res.studentSurname,
+                                      course: res.course,
+                                      educationType: res.educationType,
+                                      specialty: res.specialty,
+                                      literatureTitles: selectedLitTitles,
+                                      score: res.score,
+                                      total: res.total,
+                                      timestamp: new Date(res.timestamp),
+                                    });
+                                  });
+                                }}
+                                className="text-indigo-600 hover:text-indigo-800 inline-flex items-center justify-center p-2 rounded-lg hover:bg-indigo-50 transition-colors"
+                                title="Natijani PDF yuklab olish"
+                              >
+                                <FileText size={18} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );

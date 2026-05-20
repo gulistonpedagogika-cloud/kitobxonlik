@@ -13,9 +13,25 @@ import { isSupabaseConfigured, supabase } from './lib/supabase';
 
 type View = 'student-home' | 'testing' | 'admin-login' | 'admin-dashboard';
 
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 export default function App() {
   const [view, setView] = useState<View>('student-home');
-  const [studentInfo, setStudentInfo] = useState({ name: '', surname: '', selectedIds: [] as string[] });
+  const [studentInfo, setStudentInfo] = useState({ 
+    name: '', 
+    surname: '', 
+    course: '', 
+    educationType: '', 
+    specialty: '', 
+    selectedIds: [] as string[] 
+  });
   const [literature, setLiterature] = useState<any[]>([]);
   const [allQuestions, setAllQuestions] = useState<Question[]>([]);
   const [testQuestions, setTestQuestions] = useState<Question[]>([]);
@@ -57,7 +73,10 @@ export default function App() {
           ...r,
           literatureIds: r.literature_ids,
           studentName: r.student_name,
-          studentSurname: r.student_surname
+          studentSurname: r.student_surname,
+          course: r.course || '',
+          educationType: r.education_type || '',
+          specialty: r.specialty || ''
         }));
         setResults(mappedResults);
       }
@@ -81,8 +100,29 @@ export default function App() {
     });
   };
 
-  const startTest = ({ name, surname, selectedLiteratureIds }: { name: string; surname: string; selectedLiteratureIds: string[] }) => {
-    setStudentInfo({ name, surname, selectedIds: selectedLiteratureIds });
+  const startTest = ({ 
+    name, 
+    surname, 
+    course, 
+    educationType, 
+    specialty, 
+    selectedLiteratureIds 
+  }: { 
+    name: string; 
+    surname: string; 
+    course: string; 
+    educationType: string; 
+    specialty: string; 
+    selectedLiteratureIds: string[] 
+  }) => {
+    setStudentInfo({ 
+      name, 
+      surname, 
+      course, 
+      educationType, 
+      specialty, 
+      selectedIds: selectedLiteratureIds 
+    });
     
     const TOTAL_QUESTIONS = settings.questionCount; 
     const finalQuestions: Question[] = [];
@@ -94,7 +134,7 @@ export default function App() {
       const taking = countPerLit + (remainder > 0 ? 1 : 0);
       if (remainder > 0) remainder--;
 
-      const shuffledLit = [...litQuestions].sort(() => Math.random() - 0.5);
+      const shuffledLit = shuffleArray([...litQuestions]);
       finalQuestions.push(...shuffledLit.slice(0, Math.min(taking, shuffledLit.length)));
     });
     
@@ -103,7 +143,26 @@ export default function App() {
       return;
     }
 
-    const finalShuffled = finalQuestions.sort(() => Math.random() - 0.5);
+    // Randomize the order of questions and all their individual options
+    const finalShuffled = shuffleArray(finalQuestions).map((q) => {
+      const optionsWithFlags = q.options.map((optionText, idx) => ({
+        text: optionText,
+        isCorrect: idx === q.correctOption,
+      }));
+
+      // Shuffle the options using secure Fisher-Yates array shuffling
+      const shuffledOptions = shuffleArray(optionsWithFlags);
+
+      // Locate where the correct answer ended up
+      const newCorrectOptionIndex = shuffledOptions.findIndex((opt) => opt.isCorrect);
+
+      return {
+        ...q,
+        options: shuffledOptions.map((opt) => opt.text),
+        correctOption: newCorrectOptionIndex !== -1 ? newCorrectOptionIndex : 0,
+      };
+    });
+
     setTestQuestions(finalShuffled);
     setView('testing');
   };
@@ -112,6 +171,9 @@ export default function App() {
     const finalResult = {
       student_name: studentInfo.name,
       student_surname: studentInfo.surname,
+      course: studentInfo.course,
+      education_type: studentInfo.educationType,
+      specialty: studentInfo.specialty,
       score: result.score,
       total: result.total,
       literature_ids: studentInfo.selectedIds,
@@ -122,7 +184,17 @@ export default function App() {
     if (error) {
       console.error('Error saving result:', error);
     } else if (data) {
-      setResults([data[0], ...results]);
+      const dbResult = data[0];
+      const mappedDbResult = {
+        ...dbResult,
+        literatureIds: dbResult.literature_ids,
+        studentName: dbResult.student_name,
+        studentSurname: dbResult.student_surname,
+        course: dbResult.course || '',
+        educationType: dbResult.education_type || '',
+        specialty: dbResult.specialty || ''
+      };
+      setResults([mappedDbResult, ...results]);
     }
   };
 
